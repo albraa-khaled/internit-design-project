@@ -6,18 +6,21 @@ navigator.geolocation.getCurrentPosition(position => {
     lng: position.coords.longitude
   };
 
+  // Initialize map
   map = L.map('map').setView([userLocation.lat, userLocation.lng], 14);
 
+  // Add OpenStreetMap tiles
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
+  // Add user marker
   L.marker([userLocation.lat, userLocation.lng])
     .addTo(map)
     .bindPopup("You are here")
     .openPopup();
 
-  // Fetch nearby cars (mock data from backend)
+  // Fetch nearby cars and show them
   fetch('/cars')
     .then(res => res.json())
     .then(cars => {
@@ -32,6 +35,20 @@ navigator.geolocation.getCurrentPosition(position => {
         .bindPopup(`Car #${car.id}`);
       });
     });
+
+  // Add search bar (Geocoder)
+  L.Control.geocoder({
+    defaultMarkGeocode: false,
+    placeholder: "Search for a location..."
+  })
+  .on('markgeocode', function(e) {
+    const center = e.geocode.center;
+    map.setView(center, 16);
+    L.marker(center).addTo(map)
+      .bindPopup(e.geocode.name)
+      .openPopup();
+  })
+  .addTo(map);
 });
 
 function reserveSeats() {

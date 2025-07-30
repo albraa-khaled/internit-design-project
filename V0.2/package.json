@@ -1,5 +1,5 @@
 {
-  "name": "free-ride-map",
+  "name": "free-ride-app",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
