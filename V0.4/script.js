@@ -93,3 +93,100 @@ document.getElementById("reservationForm").addEventListener("submit", function (
 function confirmBooking(carId) {
   alert(`Booking confirmed with Car #${carId}`);
 }
+
+// ====== LOGIN LOGIC ======
+const loginBtn = document.getElementById("loginBtn");
+const loginModal = document.getElementById("loginModal");
+const userPanel = document.getElementById("userPanel");
+
+function showLoginModal() {
+  loginModal.classList.remove("hidden");
+}
+
+function closeLogin() {
+  loginModal.classList.add("hidden");
+}
+
+loginBtn.addEventListener("click", showLoginModal);
+
+document.getElementById("loginForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  if (username === "" || password === "") {
+    alert("Please fill in all fields.");
+    return;
+  }
+
+  // (For demo only – replace with real auth in production)
+  if (username === "admin" && password === "1234") {
+    localStorage.setItem("loggedInUser", username);
+    updateLoginUI();
+    closeLogin();
+  } else {
+    alert("Invalid credentials.");
+  }
+});
+
+function updateLoginUI() {
+  const user = localStorage.getItem("loggedInUser");
+
+  if (user) {
+    userPanel.innerHTML = `
+      <span style="color:white;">Welcome, ${user}</span>
+      <button onclick="logout()">Logout</button>
+    `;
+  } else {
+    userPanel.innerHTML = `<button id="loginBtn">Login</button>`;
+    document.getElementById("loginBtn").addEventListener("click", showLoginModal);
+  }
+}
+
+function logout() {
+  localStorage.removeItem("loggedInUser");
+  updateLoginUI();
+}
+
+// Initialize login state on page load
+updateLoginUI();
+
+// ======= REGISTER LOGIC =======
+const registerModal = document.getElementById("registerModal");
+
+function openRegister() {
+  closeLogin();
+  registerModal.classList.remove("hidden");
+}
+
+function closeRegister() {
+  registerModal.classList.add("hidden");
+}
+
+document.getElementById("registerForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const username = document.getElementById("regUsername").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const role = document.getElementById("regRole").value;
+
+  if (!username || !password || !role) {
+    alert("Please fill in all fields.");
+    return;
+  }
+
+  const users = JSON.parse(localStorage.getItem("users")) || {};
+
+  if (users[username]) {
+    alert("Username already exists.");
+    return;
+  }
+
+  users[username] = { password, role };
+  localStorage.setItem("users", JSON.stringify(users));
+
+  alert("Account created successfully!");
+  closeRegister();
+  showLoginModal();
+});

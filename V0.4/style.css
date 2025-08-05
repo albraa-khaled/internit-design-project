@@ -66,3 +66,31 @@ h1 {
 .hidden {
   display: none;
 }
+
+#userPanel {
+  position: fixed;
+  top: 10px;
+  right: 20px;
+  z-index: 999;
+}
+
+#userPanel button {
+  padding: 8px 16px;
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#loginModal input {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
