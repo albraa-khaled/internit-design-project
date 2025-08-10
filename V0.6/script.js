@@ -1,260 +1,319 @@
-// Initialize the map
-const map = L.map('map').setView([31.9539, 35.9106], 13); // Amman, Jordan coordinates
+/* ========= Role-based CarPool App (client-side) =========
+   - Users stored in localStorage under 'cp_users'
+   - Trips stored in localStorage under 'cp_trips'
+   - Current user stored under 'cp_current'
+   - No server needed; works with browser-sync
+*/
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+///// Helpers /////
+const $ = id => document.getElementById(id);
+const q = sel => document.querySelector(sel);
+
+function uid(prefix='id'){ return prefix + Math.random().toString(36).slice(2,9); }
+
+///// Initial data (only if not exist) /////
+if(!localStorage.getItem('cp_users')){
+  const demoUsers = {
+    "admin": { password: "admin", role: "admin"},
+    "driver1": { password: "pass", role: "driver"},
+    "user1": { password: "pass", role: "passenger"}
+  };
+  localStorage.setItem('cp_users', JSON.stringify(demoUsers));
+}
+if(!localStorage.getItem('cp_trips')){
+  const demoTrips = [
+    { id: uid('t'), driver:"driver1", from:"Abdali", to:"Queen Alia Airport", datetime:"2025-08-15T08:30", seats:4, price:15, car:"Toyota Camry", plate:"AMM123"},
+    { id: uid('t'), driver:"driver1", from:"Shmeisani", to:"Zarqa", datetime:"2025-08-15T09:00", seats:3, price:8, car:"Elantra", plate:"AMM567"},
+  ];
+  localStorage.setItem('cp_trips', JSON.stringify(demoTrips));
+}
+
+///// App state /////
+let currentUser = JSON.parse(localStorage.getItem('cp_current')) || null;
+const usersKey = 'cp_users';
+const tripsKey = 'cp_trips';
+
+///// Map setup /////
+const map = L.map('map').setView([31.9539, 35.9106], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap contributors'
 }).addTo(map);
 
-// Add a marker for Amman
-L.marker([31.9539, 35.9106]).addTo(map)
-    .bindPopup('Amman, Jordan')
-    .openPopup();
+let tripMarkers = [];
 
-// Mock data for available rides
-const mockRides = [
-    {
-        id: 1,
-        driver: "Mohammad Ali",
-        from: "Abdali",
-        to: "Queen Alia Airport",
-        departure: "2023-08-10T08:30:00",
-        seats: 4,
-        price: 15,
-        car: "Toyota Camry",
-        plate: "AMM 1234"
-    },
-    {
-        id: 2,
-        driver: "Sara Ahmad",
-        from: "Shmeisani",
-        to: "Zarqa",
-        departure: "2023-08-10T09:15:00",
-        seats: 3,
-        price: 8,
-        car: "Hyundai Elantra",
-        plate: "AMM 5678"
-    },
-    {
-        id: 3,
-        driver: "Khaled Hassan",
-        from: "Jabal Al-Weibdeh",
-        to: "Irbid",
-        departure: "2023-08-10T10:00:00",
-        seats: 2,
-        price: 12,
-        car: "Kia Sportage",
-        plate: "AMM 9012"
-    }
-];
-
-// DOM Elements
-const loginBtn = document.getElementById('loginBtn');
-const registerBtn = document.getElementById('registerBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userInfo = document.getElementById('userInfo');
-const loginModal = document.getElementById('loginModal');
-const registerModal = document.getElementById('registerModal');
-const closeButtons = document.querySelectorAll('.close');
-const showRegister = document.getElementById('showRegister');
-const showLogin = document.getElementById('showLogin');
-const loginSubmitBtn = document.getElementById('loginSubmitBtn');
-const registerSubmitBtn = document.getElementById('registerSubmitBtn');
-const currentLocationBtn = document.getElementById('currentLocationBtn');
-const searchBtn = document.getElementById('searchBtn');
-const ridesList = document.getElementById('ridesList');
-const userName = document.getElementById('userName');
-const userAvatar = document.getElementById('userAvatar');
-
-// Event Listeners
-loginBtn.addEventListener('click', () => loginModal.style.display = 'flex');
-registerBtn.addEventListener('click', () => registerModal.style.display = 'flex');
-
-closeButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-        loginModal.style.display = 'none';
-        registerModal.style.display = 'none';
-    });
-});
-
-showRegister.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginModal.style.display = 'none';
-    registerModal.style.display = 'flex';
-});
-
-showLogin.addEventListener('click', (e) => {
-    e.preventDefault();
-    registerModal.style.display = 'none';
-    loginModal.style.display = 'flex';
-});
-
-currentLocationBtn.addEventListener('click', () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-            const { latitude, longitude } = position.coords;
-            // Reverse geocoding would be implemented here in a real app
-            document.getElementById('from').value = "Current Location";
-            map.setView([latitude, longitude], 15);
-            L.marker([latitude, longitude]).addTo(map)
-                .bindPopup('Your Location')
-                .openPopup();
-        }, () => {
-            alert('Unable to retrieve your location');
-        });
-    } else {
-        alert('Geolocation is not supported by your browser');
-    }
-});
-
-searchBtn.addEventListener('click', () => {
-    const from = document.getElementById('from').value;
-    const to = document.getElementById('to').value;
-    const passengers = document.getElementById('passengers').value;
-    
-    if (!from || !to) {
-        alert('Please enter both starting location and destination');
-        return;
-    }
-    
-    // In a real app, we would search for matching rides
-    // For now, we'll just show mock data
-    displayAvailableRides();
-});
-
-// User Authentication
-loginSubmitBtn.addEventListener('click', () => {
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    if (!email || !password) {
-        alert('Please enter both email and password');
-        return;
-    }
-    
-    // Simulate login
-    localStorage.setItem('currentUser', JSON.stringify({
-        name: "John Doe",
-        email,
-        role: "passenger"
-    }));
-    
-    loginModal.style.display = 'none';
-    updateAuthUI();
-});
-
-registerSubmitBtn.addEventListener('click', () => {
-    const name = document.getElementById('regName').value;
-    const email = document.getElementById('regEmail').value;
-    const password = document.getElementById('regPassword').value;
-    const role = document.getElementById('regRole').value;
-    
-    if (!name || !email || !password) {
-        alert('Please fill all fields');
-        return;
-    }
-    
-    // Save user to localStorage
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    users.push({ name, email, password, role });
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    // Set as current user
-    localStorage.setItem('currentUser', JSON.stringify({ name, email, role }));
-    
-    registerModal.style.display = 'none';
-    updateAuthUI();
-});
-
-logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('currentUser');
-    updateAuthUI();
-});
-
-// Functions
-function updateAuthUI() {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (currentUser) {
-        // Extract initials for avatar
-        const initials = currentUser.name.split(' ').map(n => n[0]).join('');
-        userAvatar.textContent = initials;
-        userName.textContent = currentUser.name;
-        userInfo.style.display = 'flex';
-        loginBtn.parentElement.style.display = 'none';
-    } else {
-        userInfo.style.display = 'none';
-        loginBtn.parentElement.style.display = 'flex';
-    }
+function clearTripMarkers(){
+  tripMarkers.forEach(m => map.removeLayer(m));
+  tripMarkers = [];
 }
 
-function displayAvailableRides() {
-    ridesList.innerHTML = '';
-    
-    mockRides.forEach(ride => {
-        const rideElement = document.createElement('div');
-        rideElement.className = 'ride-card fade-in';
-        
-        // Create seat indicators
-        const seatElements = [];
-        for (let i = 0; i < 4; i++) {
-            const seat = document.createElement('div');
-            seat.className = `seat ${i < ride.seats ? 'available' : ''}`;
-            seat.textContent = i+1;
-            seatElements.push(seat.outerHTML);
-        }
-        
-        rideElement.innerHTML = `
-            <div class="ride-header">
-                <div class="driver-info">
-                    <div class="driver-avatar">${ride.driver.split(' ').map(n => n[0]).join('')}</div>
-                    <div>
-                        <strong>${ride.driver}</strong>
-                        <div>${ride.car} • ${ride.plate}</div>
-                    </div>
-                </div>
-                <div class="price">${ride.price} JOD</div>
-            </div>
-            <div class="ride-details">
-                <div class="dot"></div>
-                <div>${ride.from}</div>
-                <div class="dot" style="background-color: ${ride.seats > 0 ? '#e74c3c' : '#3498db'};"></div>
-                <div>${ride.to}</div>
-            </div>
-            <div class="ride-footer">
-                <div><i class="far fa-clock"></i> ${new Date(ride.departure).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
-                <div class="seats">
-                    ${seatElements.join('')}
-                </div>
-            </div>
-            <button class="btn btn-primary btn-block reserve-btn" data-id="${ride.id}" style="margin-top: 1rem;">
-                <i class="fas fa-chair"></i> Reserve Seat
-            </button>
-        `;
-        
-        ridesList.appendChild(rideElement);
-    });
-    
-    // Add event listeners to reservation buttons
-    document.querySelectorAll('.reserve-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const rideId = this.getAttribute('data-id');
-            const ride = mockRides.find(r => r.id === parseInt(rideId));
-            
-            if (ride) {
-                alert(`Reservation confirmed! You've booked a seat in ${ride.driver}'s ${ride.car} from ${ride.from} to ${ride.to}. Price: ${ride.price} JOD.`);
-            }
-        });
-    });
+function renderTripsOnMap(trips){
+  clearTripMarkers();
+  trips.forEach(trip => {
+    const m = L.marker([31.9539 + (Math.random()-0.5)*0.06, 35.9106 + (Math.random()-0.5)*0.06]).addTo(map);
+    m.bindPopup(`
+      <div class="marker-popup">
+        <strong>${trip.from} → ${trip.to}</strong><br>
+        Driver: ${trip.driver} • ${trip.car} ${trip.plate}<br>
+        ${new Date(trip.datetime).toLocaleString()} • ${trip.seats} seats • ${trip.price} JOD<br>
+        ${ currentUser && currentUser.role === 'passenger' && trip.seats>0 ? `<button data-trip="${trip.id}" class="reserve-btn">Reserve</button>` : '' }
+      </div>
+    `);
+    tripMarkers.push(m);
+  });
 }
 
-// Initialize the app
-function initApp() {
-    updateAuthUI();
-    displayAvailableRides();
-    
-    // Set today's date as default
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date').value = today;
+// Reserve button in marker: use event delegation on document (Leaflet popups added to DOM when opened)
+document.addEventListener('click',(e)=>{
+  if(e.target && e.target.matches('.reserve-btn')){
+    const tripId = e.target.getAttribute('data-trip');
+    doReserve(tripId);
+  }
+});
+
+///// UI rendering /////
+function updateHeader(){
+  $('welcomeText').textContent = currentUser ? `${currentUser.username} (${currentUser.role})` : '';
+  $('loginBtn').style.display = currentUser ? 'none' : '';
+  $('signupBtn').style.display = currentUser ? 'none' : '';
+  $('logoutBtn').style.display = currentUser ? '' : 'none';
+  $('startBookingBtn').style.display = (currentUser && currentUser.role === 'passenger') ? '' : 'none';
 }
 
-// Initialize when the DOM is loaded
-document.addEventListener('DOMContentLoaded', initApp);
+function renderSidebar(){
+  const sidebar = $('sidebar');
+  sidebar.innerHTML = '';
+  if(!currentUser){
+    const card = document.createElement('div'); card.className='card';
+    card.innerHTML = `<h2>Welcome</h2><p class="small">Please login or create an account to start using the app.</p>`;
+    sidebar.appendChild(card);
+    return;
+  }
+
+  if(currentUser.role === 'passenger'){
+    const t = document.getElementById('passengerTemplate').content.cloneNode(true);
+    sidebar.appendChild(t);
+    // set default date to today
+    const dateInput = sidebar.querySelector('#searchDate');
+    if(dateInput) dateInput.value = new Date().toISOString().slice(0,10);
+    // wire search button
+    sidebar.querySelector('#searchTripsBtn').addEventListener('click', passengerSearch);
+    // initial fill of trips list
+    passengerSearch();
+  }
+
+  if(currentUser.role === 'driver'){
+    const t = document.getElementById('driverTemplate').content.cloneNode(true);
+    sidebar.appendChild(t);
+    // create trip handler
+    sidebar.querySelector('#createTripBtn').addEventListener('click', ()=>{
+      const from = sidebar.querySelector('#createFrom').value.trim();
+      const to = sidebar.querySelector('#createTo').value.trim();
+      const datetime = sidebar.querySelector('#createDateTime').value;
+      const seats = parseInt(sidebar.querySelector('#createSeats').value)||1;
+      const price = parseFloat(sidebar.querySelector('#createPrice').value)||0;
+      const car = sidebar.querySelector('#createCar').value.trim()||'Car';
+      const plate = sidebar.querySelector('#createPlate').value.trim()||'---';
+      if(!from||!to||!datetime){ alert('Fill from, to and date/time'); return; }
+      const trips = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+      const newTrip = { id: uid('t'), driver: currentUser.username, from, to, datetime, seats, price, car, plate };
+      trips.push(newTrip);
+      localStorage.setItem(tripsKey, JSON.stringify(trips));
+      alert('Trip created');
+      renderSidebar(); // re-render so driver sees own trips
+      renderAllTripsOnMap();
+    });
+    // driver trip list
+    const listEl = sidebar.querySelector('#driverTripList');
+    const trips = JSON.parse(localStorage.getItem(tripsKey) || '[]').filter(t=>t.driver===currentUser.username);
+    listEl.innerHTML = trips.length ? trips.map(t => tripCardHTML(t)).join('') : '<p class="small">No trips yet</p>';
+    // add cancel trip actions
+    listEl.querySelectorAll('.cancel-trip-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const tripId = btn.getAttribute('data-trip');
+        let tripsAll = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+        tripsAll = tripsAll.filter(x=>x.id!==tripId);
+        localStorage.setItem(tripsKey, JSON.stringify(tripsAll));
+        renderSidebar();
+        renderAllTripsOnMap();
+      });
+    });
+  }
+
+  if(currentUser.role === 'admin'){
+    const t = document.getElementById('adminTemplate').content.cloneNode(true);
+    sidebar.appendChild(t);
+
+    // users management
+    const usersObj = JSON.parse(localStorage.getItem(usersKey) || '{}');
+    const usersArr = Object.keys(usersObj).map(u => ({ username: u, role: usersObj[u].role }));
+    const adminUsers = sidebar.querySelector('#adminUsers');
+    adminUsers.innerHTML = usersArr.map(u => `
+      <div class="trip-card">
+        <div><strong>${u.username}</strong> <span class="small">(${u.role})</span></div>
+        <div style="margin-top:8px">
+          <button class="btn btn-secondary delete-user" data-user="${u.username}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    adminUsers.querySelectorAll('.delete-user').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const uname = b.getAttribute('data-user');
+        const users = JSON.parse(localStorage.getItem(usersKey) || '{}');
+        delete users[uname];
+        localStorage.setItem(usersKey, JSON.stringify(users));
+        renderSidebar();
+      });
+    });
+
+    // trips list for admin
+    const adminTrips = sidebar.querySelector('#adminTrips');
+    const allTrips = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+    adminTrips.innerHTML = allTrips.map(t => `
+      <div class="trip-card">
+        <div><strong>${t.from} → ${t.to}</strong></div>
+        <div class="small">${t.datetime} • ${t.seats} seats • Driver: ${t.driver}</div>
+        <div style="margin-top:8px"><button class="btn btn-secondary delete-trip" data-id="${t.id}">Delete Trip</button></div>
+      </div>
+    `).join('');
+    adminTrips.querySelectorAll('.delete-trip').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        const id = b.getAttribute('data-id');
+        let all = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+        all = all.filter(x=>x.id!==id);
+        localStorage.setItem(tripsKey, JSON.stringify(all));
+        renderSidebar();
+        renderAllTripsOnMap();
+      });
+    });
+  }
+}
+
+function tripCardHTML(t){
+  return `
+    <div class="trip-card">
+      <div><strong>${t.from} → ${t.to}</strong></div>
+      <div class="small">${new Date(t.datetime).toLocaleString()} • ${t.seats} seats • ${t.price} JOD • ${t.car} ${t.plate}</div>
+      <div style="margin-top:8px">
+        <button class="btn btn-secondary cancel-trip-btn" data-trip="${t.id}">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+///// Passenger search & reserve /////
+function passengerSearch(){
+  const sidebar = $('sidebar');
+  const from = sidebar.querySelector('#searchFrom').value.trim().toLowerCase();
+  const to = sidebar.querySelector('#searchTo').value.trim().toLowerCase();
+  const passengers = parseInt(sidebar.querySelector('#searchPassengers').value) || 1;
+  const date = sidebar.querySelector('#searchDate').value;
+
+  let trips = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+  // simple filter: match from/to text and seats >= passengers and same date if provided
+  trips = trips.filter(t => {
+    const matchesFrom = !from || t.from.toLowerCase().includes(from);
+    const matchesTo = !to || t.to.toLowerCase().includes(to);
+    const enoughSeats = (t.seats || 0) >= passengers;
+    const matchesDate = !date || t.datetime.startsWith(date);
+    return matchesFrom && matchesTo && enoughSeats && matchesDate;
+  });
+
+  // display list
+  const listEl = $('tripList');
+  listEl.innerHTML = trips.length ? trips.map(t=>`
+    <div class="trip-card">
+      <div><strong>${t.from} → ${t.to}</strong></div>
+      <div class="small">${new Date(t.datetime).toLocaleString()} • ${t.seats} seats • ${t.price} JOD • Driver: ${t.driver}</div>
+      <div style="margin-top:8px">
+        <button class="btn reserve-local" data-id="${t.id}">Reserve</button>
+      </div>
+    </div>
+  `).join('') : '<p class="small">No trips found</p>';
+
+  // Reserve buttons
+  listEl.querySelectorAll('.reserve-local').forEach(b=>{
+    b.addEventListener('click', () => doReserve(b.getAttribute('data-id'), passengers));
+  });
+
+  // Map markers -> show only filtered trips
+  renderTripsOnMap(trips);
+}
+
+function doReserve(tripId, seatsRequested=1){
+  if(!currentUser || currentUser.role!=='passenger'){ alert('You must be a logged-in passenger to reserve'); return; }
+  const trips = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+  const idx = trips.findIndex(t=>t.id===tripId);
+  if(idx===-1){ alert('Trip not found'); return; }
+  const t = trips[idx];
+  if((t.seats||0) < seatsRequested){ alert('Not enough seats'); return; }
+  // decrement seats and save reservation record
+  trips[idx].seats = (t.seats - seatsRequested);
+  localStorage.setItem(tripsKey, JSON.stringify(trips));
+
+  // store reservation (simple)
+  const reservations = JSON.parse(localStorage.getItem('cp_res') || '[]');
+  reservations.push({ id: uid('r'), tripId, passenger: currentUser.username, seats: seatsRequested, time: new Date().toISOString() });
+  localStorage.setItem('cp_res', JSON.stringify(reservations));
+
+  alert('Reservation successful');
+  passengerSearch(); // refresh listing and map
+  renderAllTripsOnMap();
+}
+
+///// render all trips on map (for admin/driver view) /////
+function renderAllTripsOnMap(){
+  const all = JSON.parse(localStorage.getItem(tripsKey) || '[]');
+  renderTripsOnMap(all);
+}
+
+///// Authentication UI and handlers /////
+$('loginBtn').addEventListener('click', ()=>$('loginModal').style.display='flex');
+$('signupBtn').addEventListener('click', ()=>$('registerModal').style.display='flex');
+$('logoutBtn').addEventListener('click', ()=>{
+  localStorage.removeItem('cp_current'); currentUser=null; updateHeader(); renderSidebar(); renderAllTripsOnMap();
+});
+
+// modal close buttons
+document.querySelectorAll('.modal-close').forEach(b=>{
+  b.addEventListener('click', ()=> b.closest('.modal').style.display='none');
+});
+$('toRegister').addEventListener('click', ()=>{ $('loginModal').style.display='none'; $('registerModal').style.display='flex';});
+$('toLogin').addEventListener('click', ()=>{ $('registerModal').style.display='none'; $('loginModal').style.display='flex';});
+
+// perform login
+$('doLogin').addEventListener('click', ()=>{
+  const username = $('loginUser').value.trim();
+  const pass = $('loginPass').value;
+  if(!username||!pass){ alert('Enter credentials'); return; }
+  const users = JSON.parse(localStorage.getItem(usersKey) || '{}');
+  if(!users[username] || users[username].password !== pass){ alert('Invalid'); return; }
+  currentUser = { username, role: users[username].role };
+  localStorage.setItem('cp_current', JSON.stringify(currentUser));
+  $('loginModal').style.display='none';
+  updateHeader(); renderSidebar(); renderAllTripsOnMap();
+});
+
+// register
+$('doRegister').addEventListener('click', ()=>{
+  const username = $('regUser').value.trim();
+  const pass = $('regPass').value;
+  const role = $('regRole').value;
+  if(!username||!pass||!role){ alert('Fill fields'); return; }
+  const users = JSON.parse(localStorage.getItem(usersKey) || '{}');
+  if(users[username]){ alert('Username exists'); return; }
+  users[username] = { password: pass, role };
+  localStorage.setItem(usersKey, JSON.stringify(users));
+  currentUser = { username, role };
+  localStorage.setItem('cp_current', JSON.stringify(currentUser));
+  $('registerModal').style.display='none';
+  updateHeader(); renderSidebar(); renderAllTripsOnMap();
+});
+
+///// Startup /////
+function boot(){
+  currentUser = JSON.parse(localStorage.getItem('cp_current')) || null;
+  updateHeader();
+  renderSidebar();
+  renderAllTripsOnMap();
+}
+boot();

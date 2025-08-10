@@ -1,156 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CarPool - Car Seat Reservation</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CarPool - Role Based</title>
+
+  <!-- Leaflet CSS -->
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <!-- Header -->
-    <header>
-        <div class="logo">
-            <i class="fas fa-car"></i>
-            <span>CarPool</span>
-        </div>
-        <nav>
-            <ul>
-                <li><a href="#"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="#"><i class="fas fa-road"></i> Rides</a></li>
-                <li><a href="#"><i class="fas fa-history"></i> History</a></li>
-                <li><a href="#"><i class="fas fa-question-circle"></i> Help</a></li>
-            </ul>
-        </nav>
-        <div class="auth-buttons">
-            <button class="btn btn-secondary" id="loginBtn">
-                <i class="fas fa-sign-in-alt"></i> Login
-            </button>
-            <button class="btn btn-primary" id="registerBtn">
-                <i class="fas fa-user-plus"></i> Register
-            </button>
-        </div>
-        <div class="user-info" id="userInfo" style="display: none;">
-            <div class="user-avatar" id="userAvatar">JD</div>
-            <span id="userName">John Doe</span>
-            <button class="btn btn-secondary" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i>
-            </button>
-        </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="container">
-        <!-- Sidebar with booking form -->
-        <div class="sidebar">
-            <div class="booking-card fade-in">
-                <h2><i class="fas fa-map-marker-alt"></i> Book a Ride</h2>
-                <div class="form-group">
-                    <label for="from">From</label>
-                    <div class="location-input">
-                        <input type="text" id="from" class="form-control" placeholder="Enter starting location">
-                        <button class="btn btn-primary" id="currentLocationBtn">
-                            <i class="fas fa-location-arrow"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="to">To</label>
-                    <input type="text" id="to" class="form-control" placeholder="Enter destination">
-                </div>
-                <div class="form-group">
-                    <label for="passengers">Passengers</label>
-                    <input type="number" id="passengers" class="form-control" min="1" max="8" value="1">
-                </div>
-                <div class="form-group">
-                    <label for="date">Date</label>
-                    <input type="date" id="date" class="form-control">
-                </div>
-                <button class="btn btn-primary btn-block" id="searchBtn">
-                    <i class="fas fa-search"></i> Search Rides
-                </button>
-            </div>
-
-            <!-- Available Rides -->
-            <div class="rides-container">
-                <h3>Available Rides</h3>
-                <div id="ridesList">
-                    <!-- Rides will be populated here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Map Container -->
-        <div class="map-container">
-            <div id="map"></div>
-        </div>
+  <header>
+    <div class="brand">CarPool</div>
+    <div class="controls">
+      <span id="welcomeText"></span>
+      <button id="loginBtn">Login</button>
+      <button id="signupBtn">Create Account</button>
+      <button id="logoutBtn" style="display:none">Logout</button>
     </div>
+  </header>
 
-    <!-- Login Modal -->
-    <div class="modal" id="loginModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Login to Your Account</h2>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="loginEmail">Email</label>
-                    <input type="email" id="loginEmail" class="form-control" placeholder="Enter your email">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword">Password</label>
-                    <input type="password" id="loginPassword" class="form-control" placeholder="Enter your password">
-                </div>
-                <button class="btn btn-primary btn-block" id="loginSubmitBtn">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </button>
-                <div style="text-align: center; margin-top: 1rem;">
-                    <p>Don't have an account? <a href="#" id="showRegister">Register</a></p>
-                </div>
-            </div>
-        </div>
+  <main class="layout">
+    <aside class="sidebar" id="sidebar">
+      <!-- Dynamic role-based content will be rendered here -->
+    </aside>
+
+    <section class="map-area">
+      <div id="map"></div>
+      <div class="floating-btn">
+        <button id="startBookingBtn" style="display:none">Start Booking</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modals: Login / Signup -->
+  <div class="modal" id="loginModal" style="display:none">
+    <div class="modal-card">
+      <h3>Login</h3>
+      <input id="loginUser" placeholder="Username" />
+      <input id="loginPass" type="password" placeholder="Password" />
+      <button id="doLogin">Login</button>
+      <button class="btn-link" id="toRegister">Create account</button>
+      <button class="modal-close" data-target="loginModal">Close</button>
     </div>
+  </div>
 
-    <!-- Register Modal -->
-    <div class="modal" id="registerModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Create New Account</h2>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="regName">Full Name</label>
-                    <input type="text" id="regName" class="form-control" placeholder="Enter your full name">
-                </div>
-                <div class="form-group">
-                    <label for="regEmail">Email</label>
-                    <input type="email" id="regEmail" class="form-control" placeholder="Enter your email">
-                </div>
-                <div class="form-group">
-                    <label for="regPassword">Password</label>
-                    <input type="password" id="regPassword" class="form-control" placeholder="Create a password">
-                </div>
-                <div class="form-group">
-                    <label for="regRole">Account Type</label>
-                    <select id="regRole" class="form-control">
-                        <option value="passenger">Passenger</option>
-                        <option value="driver">Driver</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary btn-block" id="registerSubmitBtn">
-                    <i class="fas fa-user-plus"></i> Create Account
-                </button>
-                <div style="text-align: center; margin-top: 1rem;">
-                    <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
-                </div>
-            </div>
-        </div>
+  <div class="modal" id="registerModal" style="display:none">
+    <div class="modal-card">
+      <h3>Create Account</h3>
+      <input id="regUser" placeholder="Username" />
+      <input id="regPass" type="password" placeholder="Password" />
+      <select id="regRole">
+        <option value="passenger">Passenger</option>
+        <option value="driver">Driver</option>
+        <option value="admin">Admin</option>
+      </select>
+      <button id="doRegister">Create</button>
+      <button class="btn-link" id="toLogin">Already have account</button>
+      <button class="modal-close" data-target="registerModal">Close</button>
     </div>
+  </div>
 
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="script.js"></script>
+  <!-- Small templates used by script (hidden) -->
+  <template id="passengerTemplate">
+    <div class="card">
+      <h2>Passenger Dashboard</h2>
+
+      <div class="card-section">
+        <h4>Search Trips</h4>
+        <label>From<input id="searchFrom" placeholder="Start area"></label>
+        <label>To<input id="searchTo" placeholder="Destination"></label>
+        <label>Passengers<input id="searchPassengers" type="number" min="1" value="1"></label>
+        <label>Date<input id="searchDate" type="date"></label>
+        <button id="searchTripsBtn">Find Trips</button>
+      </div>
+
+      <div class="card-section">
+        <h4>Available Trips</h4>
+        <div id="tripList"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="driverTemplate">
+    <div class="card">
+      <h2>Driver Dashboard</h2>
+      <div class="card-section">
+        <h4>Create Trip</h4>
+        <label>From<input id="createFrom" placeholder="Start area"></label>
+        <label>To<input id="createTo" placeholder="Destination"></label>
+        <label>Date & Time<input id="createDateTime" type="datetime-local"></label>
+        <label>Seats<input id="createSeats" type="number" min="1" value="4"></label>
+        <label>Price<input id="createPrice" type="number" min="0" value="0"></label>
+        <label>Car<input id="createCar" placeholder="Car model"></label>
+        <label>Plate<input id="createPlate" placeholder="Plate"></label>
+        <button id="createTripBtn">Create Trip</button>
+      </div>
+
+      <div class="card-section">
+        <h4>Your Trips</h4>
+        <div id="driverTripList"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="adminTemplate">
+    <div class="card">
+      <h2>Admin Dashboard</h2>
+
+      <div class="card-section">
+        <h4>Users</h4>
+        <div id="adminUsers"></div>
+      </div>
+
+      <div class="card-section">
+        <h4>All Trips</h4>
+        <div id="adminTrips"></div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
